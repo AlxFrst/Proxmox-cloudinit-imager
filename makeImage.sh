@@ -5,9 +5,8 @@ echo "🚀 Bienvenue dans le script de création d'image CloudInit pour Proxmox 
 echo "✨ Je suis là pour te guider dans la création d'une image CloudInit qui sera ensuite transformée en un modèle pour Proxmox VE. C'est parti ! ✨"
 
 # Liste des URL pour les images CloudInit
-ubuntu1804="https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img"
-ubuntu2204="https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
-ubuntu2304="https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
+ubuntu2004="https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img"
+ubuntu2204="https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img"
 debian10="https://cloud.debian.org/images/cloud/buster/20220307-641/debian-10-generic-amd64-20220307-641.qcow2"
 debian11="https://cloud.debian.org/images/cloud/bullseye/20220307-641/debian-11-generic-amd64-20220307-641.qcow2"
 centos8="https://cloud.centos.org/centos/8/x86_64/images/CentOS-8-GenericCloud-8.5.2105-20210603.0.x86_64.qcow2"
@@ -15,7 +14,7 @@ centos8="https://cloud.centos.org/centos/8/x86_64/images/CentOS-8-GenericCloud-8
 # Inviter l'utilisateur à choisir une image CloudInit ou une image personnalisée
 echo " "
 echo "🌐 Il est temps de choisir ton image CloudInit 🌐"
-echo "1. Ubuntu 18.04"
+echo "1. Ubuntu 20.04"
 echo "2. Ubuntu 22.04"
 echo "3. Debian 10"
 echo "4. Debian 11"
@@ -64,7 +63,7 @@ echo "🚀 Je commence la création de l'image, reste attentif ! 🚀"
 # Téléchargement de l'image
 apt install wget -y
 if [ $choix -eq 1 ]; then
-    wget $ubuntu1804
+    wget $ubuntu2004
     elif [ $choix -eq 2 ]; then
     wget $ubuntu2204
     elif [ $choix -eq 3 ]; then
