@@ -49,20 +49,31 @@ echo "🌍 Sélectionne le réseau pour ta VM 🌍"
 echo "Le plus souvent, c'est vmbr0 pour le premier réseau, mais vérifie dans l'onglet réseau de Proxmox VE"
 read -p "Quel est le nom du réseau que tu choisis ? " reseau
 
+# Ajout de choses supplémentaires comme par exemple docker, docker-compose, etc.
+echo " "
+echo "📦 Souhaites-tu ajouter des paquets supplémentaires à ton image ? 📦"
+echo "1. Oui"
+echo "2. Non"
+read -p "Quel est ton choix ? " choixPaquets
+
+if [ $choixPaquets -eq 1 ]; then
+    echo "Work in progress not available yet"
+fi
+
 echo "🚀 Je commence la création de l'image, reste attentif ! 🚀"
 # Téléchargement de l'image
 apt install wget -y
 if [ $choix -eq 1 ]; then
     wget $ubuntu1804
-elif [ $choix -eq 2 ]; then
+    elif [ $choix -eq 2 ]; then
     wget $ubuntu2204
-elif [ $choix -eq 3 ]; then
+    elif [ $choix -eq 3 ]; then
     wget $debian10
-elif [ $choix -eq 4 ]; then
+    elif [ $choix -eq 4 ]; then
     wget $debian11
-elif [ $choix -eq 5 ]; then
+    elif [ $choix -eq 5 ]; then
     wget $centos8
-elif [ $choix -eq 6 ]; then
+    elif [ $choix -eq 6 ]; then
     wget $url
 fi
 apt update -y
