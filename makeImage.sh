@@ -87,17 +87,6 @@ check_cancel
 NETWORK=$(whiptail --inputbox "Select the network for your VM (usually 'vmbr0'):" 8 60 3>&1 1>&2 2>&3)
 check_cancel
 
-# Prompt for additional packages
-PACKAGES=$(whiptail --title "Additional Packages" --menu "Do you want to add additional packages to your image?" 15 60 2 \
-"1" "Yes" \
-"2" "No" 3>&1 1>&2 2>&3)
-check_cancel
-
-if [ "$PACKAGES" -eq 1 ]; then
-    whiptail --msgbox "This feature is under development." 8 60
-    check_cancel
-fi
-
 # Start the image creation process
 whiptail --msgbox "Starting the image creation process, please wait..." 8 60
 check_cancel
