@@ -1,101 +1,137 @@
 #!/bin/bash
-# Script de création d'image CloudInit pour Proxmox VE par Alx
+# CloudInit Image Creation Script for Proxmox VE by Alx
 
-echo "🚀 Bienvenue dans le script de création d'image CloudInit pour Proxmox VE, version 1.0, conçu par Alx ! 🚀"
-echo "✨ Je suis là pour te guider dans la création d'une image CloudInit qui sera ensuite transformée en un modèle pour Proxmox VE. C'est parti ! ✨"
+# Function to display the header
+function header_info {
+    clear
+    cat <<"EOF"
+╔═╗──────╔╦╗──╔╦╗─╔══╗
+║╔╬╗╔═╦╦╦╝╠╬═╦╬╣╚╗╚║║╬══╦═╗╔═╦═╦╦╗
+║╚╣╚╣╬║║║╬║║║║║║╔╣╔║║╣║║║╬╚╣╬║╩╣╔╝
+╚═╩═╩═╩═╩═╩╩╩═╩╩═╝╚══╩╩╩╩══╬╗╠═╩╝
+───────────────────────────╚═╝
+EOF
+}
 
-# Liste des URL pour les images CloudInit
+# Check if whiptail is installed, otherwise install it
+if ! command -v whiptail &> /dev/null
+then
+    echo "whiptail is not installed. Installing..."
+    apt-get update
+    apt-get install whiptail -y
+fi
+
+# Display the header
+header_info
+
+# List of URLs for CloudInit images
+ubuntu1804="https://cloud-images.ubuntu.com/bionic/current/bionic-server-cloudimg-amd64.img"
 ubuntu2004="https://cloud-images.ubuntu.com/focal/current/focal-server-cloudimg-amd64.img"
 ubuntu2204="https://cloud-images.ubuntu.com/jammy/current/jammy-server-cloudimg-amd64.img"
-debian10="https://cloud.debian.org/images/cloud/buster/20220307-641/debian-10-generic-amd64-20220307-641.qcow2"
-debian11="https://cloud.debian.org/images/cloud/bullseye/20220307-641/debian-11-generic-amd64-20220307-641.qcow2"
-centos8="https://cloud.centos.org/centos/8/x86_64/images/CentOS-8-GenericCloud-8.5.2105-20210603.0.x86_64.qcow2"
+ubuntu2310="https://cloud-images.ubuntu.com/mantic/current/mantic-server-cloudimg-amd64.img"
+ubuntu2404="https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
 
-# Inviter l'utilisateur à choisir une image CloudInit ou une image personnalisée
-echo " "
-echo "🌐 Il est temps de choisir ton image CloudInit 🌐"
-echo "1. Ubuntu 20.04"
-echo "2. Ubuntu 22.04"
-echo "3. Debian 10"
-echo "4. Debian 11"
-echo "5. CentOS 8"
-echo "6. Image personnalisée"
-read -p "Quel est ton choix ? " choix
+# Function to handle cancellation
+function check_cancel {
+    if [ $? -ne 0 ]; then
+        whiptail --msgbox "Script cancelled. Exiting..." 8 40
+        exit 1
+    fi
+}
 
-# Si l'utilisateur choisit une image personnalisée, demander l'URL de l'image
-if [ $choix -eq 6 ]; then
-    echo " "
-    read -p "🔗 Merci de fournir l'URL de ton image : " url
+# Prompt the user to choose a CloudInit image or a custom image
+CHOICE=$(whiptail --title "Choose Image" --menu "Choose your CloudInit image" 15 60 6 \
+"1" "Ubuntu 18.04" \
+"2" "Ubuntu 20.04" \
+"3" "Ubuntu 22.04" \
+"4" "Ubuntu 23.10" \
+"5" "Ubuntu 24.04" \
+"6" "Custom Image" 3>&1 1>&2 2>&3)
+check_cancel
+
+case $CHOICE in
+    1) url=$ubuntu1804 ;;
+    2) url=$ubuntu2004 ;;
+    3) url=$ubuntu2204 ;;
+    4) url=$ubuntu2310 ;;
+    5) url=$ubuntu2404 ;;
+    6) 
+        url=$(whiptail --inputbox "Please provide the URL of your image:" 8 60 3>&1 1>&2 2>&3)
+        check_cancel
+        ;;
+    *) exit 1 ;;
+esac
+
+# Prompt the user to name their template
+NAME=$(whiptail --inputbox "What do you want to name your template (no spaces)?" 8 60 3>&1 1>&2 2>&3)
+check_cancel
+
+# Prompt the user to enter the template ID
+ID=$(whiptail --inputbox "Please provide a unique ID for your template:" 8 60 3>&1 1>&2 2>&3)
+check_cancel
+
+# Get available storage options
+mapfile -t STORAGE_OPTIONS < <(pvesm status -content rootdir | awk 'NR>1 {print $1, $2, $6/1024/1024 "GB free"}')
+
+# Prepare the storage menu
+STORAGE_MENU=()
+for OPTION in "${STORAGE_OPTIONS[@]}"; do
+    STORAGE_MENU+=("$OPTION" "")
+done
+
+# Prompt the user to choose a storage
+STORAGE=$(whiptail --title "Choose Storage" --menu "Select the storage for your template:" 15 60 6 "${STORAGE_MENU[@]}" 3>&1 1>&2 2>&3)
+check_cancel
+
+# Prompt the user to choose a network
+NETWORK=$(whiptail --inputbox "Select the network for your VM (usually 'vmbr0'):" 8 60 3>&1 1>&2 2>&3)
+check_cancel
+
+# Prompt for additional packages
+PACKAGES=$(whiptail --title "Additional Packages" --menu "Do you want to add additional packages to your image?" 15 60 2 \
+"1" "Yes" \
+"2" "No" 3>&1 1>&2 2>&3)
+check_cancel
+
+if [ "$PACKAGES" -eq 1 ]; then
+    whiptail --msgbox "This feature is under development." 8 60
+    check_cancel
 fi
 
-# Demander à l'utilisateur de nommer son modèle
-echo " "
-read -p "💡 Comment souhaites-tu nommer ton modèle (sans espaces) ? " nom
+# Start the image creation process
+whiptail --msgbox "Starting the image creation process, please wait..." 8 60
+check_cancel
 
-# Demander à l'utilisateur d'entrer l'ID du modèle
-echo " "
-read -p "🔑 Peux-tu définir un ID unique pour ton modèle ? " id
-
-# Afficher tous les stockages disponibles dans Proxmox VE et demander à l'utilisateur d'en choisir un
-echo " "
-echo "📦 Sélectionne le stockage pour ton modèle 📦"
-pvesm status
-read -p "Quel est le nom du stockage que tu choisis ? " stockage
-
-# Afficher tous les réseaux disponibles dans Proxmox VE et demander à l'utilisateur d'en choisir un
-echo " "
-echo "🌍 Sélectionne le réseau pour ta VM 🌍"
-echo "Le plus souvent, c'est vmbr0 pour le premier réseau, mais vérifie dans l'onglet réseau de Proxmox VE"
-read -p "Quel est le nom du réseau que tu choisis ? " reseau
-
-# Ajout de choses supplémentaires comme par exemple docker, docker-compose, etc.
-echo " "
-echo "📦 Souhaites-tu ajouter des paquets supplémentaires à ton image ? 📦"
-echo "1. Oui"
-echo "2. Non"
-read -p "Quel est ton choix ? " choixPaquets
-
-if [ $choixPaquets -eq 1 ]; then
-    echo "Work in progress not available yet"
-fi
-
-echo "🚀 Je commence la création de l'image, reste attentif ! 🚀"
-# Téléchargement de l'image
+# Download the chosen image
 apt install wget -y
-if [ $choix -eq 1 ]; then
-    wget $ubuntu2004
-    elif [ $choix -eq 2 ]; then
-    wget $ubuntu2204
-    elif [ $choix -eq 3 ]; then
-    wget $debian10
-    elif [ $choix -eq 4 ]; then
-    wget $debian11
-    elif [ $choix -eq 5 ]; then
-    wget $centos8
-    elif [ $choix -eq 6 ]; then
-    wget $url
-fi
+wget $url
+
+# Update and install necessary packages
 apt update -y
 apt install qemu-utils -y
 apt install libguestfs-tools -y
-nomImage=$(ls *.img)
-virt-customize -a "$nomImage" --install qemu-guest-agent
-virt-customize -a "$nomImage" --run-command "echo -n > /etc/machine-id"
-qm create $id --name $nom --memory 512 --net0 virtio,bridge=$reseau --cores 1 --sockets 1 --description "Image CloudInit"
-qm importdisk $id "$nomImage" $stockage
-qm set $id --scsihw virtio-scsi-pci --scsi0 $stockage:vm-$id-disk-0
-qm resize $id scsi0 +15G
-qm set $id --ide2 $stockage:cloudinit
-qm set $id --boot c --bootdisk scsi0
-qm set $id --agent enabled=1
-qm set $id --ciuser ubuntu --cipassword ubuntu
-rm -rf $nomImage
-qm template $id
 
+# Customize the image
+image_name=$(ls *.img)
+virt-customize -a "$image_name" --install qemu-guest-agent
+virt-customize -a "$image_name" --run-command "echo -n > /etc/machine-id"
+
+# Create the VM template
+qm create $ID --name $NAME --memory 512 --net0 virtio,bridge=$NETWORK --cores 1 --sockets 1 --description "CloudInit Image"
+qm importdisk $ID "$image_name" $STORAGE
+qm set $ID --scsihw virtio-scsi-pci --scsi0 $STORAGE:vm-$ID-disk-0
+qm resize $ID scsi0 +15G
+qm set $ID --ide2 $STORAGE:cloudinit
+qm set $ID --boot c --bootdisk scsi0
+qm set $ID --agent enabled=1
+qm set $ID --ciuser ubuntu --cipassword ubuntu
+
+# Clean up the downloaded image
+rm -rf $image_name
+
+# Convert the VM to a template
+qm template $ID
+
+# Completion message
 clear
-echo "✅ Le processus de création de l'image est maintenant terminé ! ✅"
-echo "🎉 Tu peux désormais créer une VM à partir de ce modèle dans Proxmox VE. 🎉"
-echo "🔐 N'oublie pas de changer le mot de passe de la VM ou de modifier la configuration CloudInit pour une sécurité optimale. 🔐"
-echo "💾 Tu as la possibilité de personnaliser davantage ta VM en ajustant le disque, en ajoutant du CPU, de la mémoire, une carte réseau, etc. 💾"
-echo "👥 Clone ce modèle pour déployer plusieurs VMs avec la même configuration facilement. 👥"
-echo "Merci d'avoir utilisé ce script pour la création de ton image CloudInit. À la prochaine ! 🙏"
+whiptail --msgbox "The image creation process is complete! You can now create a VM from this template in Proxmox VE. Don't forget to change the VM password or update the CloudInit configuration for better security. Thank you for using this script!" 15 60
