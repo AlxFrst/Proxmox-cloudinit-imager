@@ -71,12 +71,14 @@ ID=$(whiptail --inputbox "Please provide a unique ID for your template:" 8 60 3>
 check_cancel
 
 # Get available storage options
-mapfile -t STORAGE_OPTIONS < <(pvesm status -content rootdir | awk 'NR>1 {print $1, $2, $6/1024/1024 "GB free"}')
+mapfile -t STORAGE_OPTIONS < <(pvesm status -content rootdir | awk 'NR>1 {printf "%s\t%s\t%.2fGB free\n", $1, $2, $6/1024/1024}')
 
-# Prepare the storage menu
+# Prepare the storage menu items
 STORAGE_MENU=()
-for OPTION in "${STORAGE_OPTIONS[@]}"; do
-    STORAGE_MENU+=("$OPTION" "")
+for option in "${STORAGE_OPTIONS[@]}"; do
+    # Split the line into ID and description
+    IFS=$'\t' read -r id type space <<< "$option"
+    STORAGE_MENU+=("$id" "$type ($space)")
 done
 
 # Prompt the user to choose a storage
@@ -106,20 +108,63 @@ virt-customize -a "$image_name" --install qemu-guest-agent
 virt-customize -a "$image_name" --run-command "echo -n > /etc/machine-id"
 
 # Create the VM template
-qm create $ID --name $NAME --memory 512 --net0 virtio,bridge=$NETWORK --cores 1 --sockets 1 --description "CloudInit Image"
-qm importdisk $ID "$image_name" $STORAGE
-qm set $ID --scsihw virtio-scsi-pci --scsi0 $STORAGE:vm-$ID-disk-0
-qm resize $ID scsi0 +15G
-qm set $ID --ide2 $STORAGE:cloudinit
-qm set $ID --boot c --bootdisk scsi0
-qm set $ID --agent enabled=1
-qm set $ID --ciuser ubuntu --cipassword ubuntu
+echo "Creating VM with ID $ID..."
+qm create "$ID" --name "$NAME" --memory 512 --net0 "virtio,bridge=$NETWORK" --cores 1 --sockets 1 --description "CloudInit Image" || {
+    echo "Failed to create VM"
+    exit 1
+}
+
+echo "Importing disk..."
+qm importdisk "$ID" "$image_name" "$STORAGE" || {
+    echo "Failed to import disk"
+    exit 1
+}
+
+echo "Configuring VM storage..."
+qm set "$ID" --scsihw virtio-scsi-pci --scsi0 "$STORAGE:vm-$ID-disk-0" || {
+    echo "Failed to configure storage"
+    exit 1
+}
+
+# echo "Resizing disk..."
+# qm resize "$ID" scsi0 +15G || {
+#     echo "Failed to resize disk"
+#     exit 1
+# }
+
+echo "Configuring CloudInit..."
+qm set "$ID" --ide2 "$STORAGE:cloudinit" || {
+    echo "Failed to configure CloudInit"
+    exit 1
+}
+
+echo "Setting boot options..."
+qm set "$ID" --boot c --bootdisk scsi0 || {
+    echo "Failed to set boot options"
+    exit 1
+}
+
+echo "Enabling QEMU agent..."
+qm set "$ID" --agent enabled=1 || {
+    echo "Failed to enable QEMU agent"
+    exit 1
+}
+
+echo "Setting default user credentials..."
+qm set "$ID" --ciuser ubuntu --cipassword "$(openssl rand -base64 12)" || {
+    echo "Failed to set user credentials"
+    exit 1
+}
 
 # Clean up the downloaded image
-rm -rf $image_name
+rm -f "$image_name"
 
+echo "Converting to template..."
 # Convert the VM to a template
-qm template $ID
+qm template "$ID" || {
+    echo "Failed to convert to template"
+    exit 1
+}
 
 # Completion message
 clear
