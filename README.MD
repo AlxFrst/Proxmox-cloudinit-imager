@@ -57,10 +57,6 @@ Pour une configuration plus avancée, vous pouvez modifier le script selon vos b
 
 Merci d'avoir choisi ce script pour la création de vos images CloudInit dans Proxmox VE. N'hésitez pas à contribuer au dépôt pour améliorer le script ou à partager vos retours d'expérience.
 
-## 📄 Licence
-
-Ce projet est sous licence XYZ. Veuillez voir le fichier `LICENSE` pour plus de détails.
-
 ---
 
 Bonne création de VM avec Proxmox VE !
