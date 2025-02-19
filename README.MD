@@ -53,10 +53,6 @@ Le script vous permet de personnaliser plusieurs aspects de l'image CloudInit et
 
 Pour une configuration plus avancée, vous pouvez modifier le script selon vos besoins ou ajouter des commandes `qm` supplémentaires après la création du modèle.
 
-## 🙏 Remerciements
-
-Merci d'avoir choisi ce script pour la création de vos images CloudInit dans Proxmox VE. N'hésitez pas à contribuer au dépôt pour améliorer le script ou à partager vos retours d'expérience.
-
 ---
 
 Bonne création de VM avec Proxmox VE !
