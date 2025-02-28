@@ -39,7 +39,7 @@ Suivez ensuite les instructions à l'écran pour sélectionner votre image Cloud
 - Ubuntu 22.04
 - Debian 10
 - Debian 11
-- CentOS 8
+- CentOS 8 
 - Image personnalisée (vous pouvez fournir l'URL de votre choix)
 
 ## ⚙️ Configuration Avancée
